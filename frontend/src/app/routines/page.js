@@ -132,7 +132,7 @@ export default function RoutinesPage() {
       enablePomodoro: true,
       pomodoroWork: "25",
       pomodoroBreak: "5",
-      tasks: [], // Add tasks array
+      tasks: [],
     }
   })
 
@@ -227,6 +227,12 @@ export default function RoutinesPage() {
   const handleEdit = (routine) => {
     setEditingRoutine(routine)
     setShowModal(true)
+  }
+
+  const handleCloseModal = () => {
+    setShowModal(false)
+    setEditingRoutine(null)
+    form.reset()
   }
 
   const handleDeleteClick = (routine) => {
@@ -372,10 +378,29 @@ export default function RoutinesPage() {
           )}
         </div>
 
-        {/* Rest of the existing code remains the same */}
         {/* Create/Edit Dialog */}
-        <Dialog open={showModal} onOpenChange={setShowModal}>
-          {/* ... existing dialog content ... */}
+        <Dialog open={showModal} onOpenChange={handleCloseModal}>
+          <DialogContent className="bg-surface-container-high border-outline sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="font-display">
+                {editingRoutine ? 'Edit Routine' : 'Create New Routine'}
+              </DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Form fields would be here - not shown in the diff */}
+                <DialogFooter>
+                  <Button 
+                    type="submit"
+                    className="bg-primary-container text-primary w-full"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {editingRoutine ? 'Update Routine' : 'Create Routine'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
         </Dialog>
 
         {/* Add AlertDialog for delete confirmation */}
@@ -383,7 +408,23 @@ export default function RoutinesPage() {
           open={!!routineToDelete} 
           onOpenChange={() => setRoutineToDelete(null)}
         >
-          {/* ... existing alert dialog content ... */}
+          <AlertDialogContent className="bg-surface-container-high border-outline">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Routine</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this routine? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                className="bg-error text-on-error"
+                onClick={confirmDelete}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
         </AlertDialog>
       </Card>
     </div>
