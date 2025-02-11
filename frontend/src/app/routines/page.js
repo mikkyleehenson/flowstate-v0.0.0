@@ -52,6 +52,9 @@ import {
   Clock,
   Timer,
   MoreVertical,
+  List,
+  GripVertical,
+  Trash2
 } from "lucide-react"
 
 const ROUTINE_TYPES = [
@@ -84,6 +87,7 @@ export default function RoutinesPage() {
       enablePomodoro: true,
       pomodoroWork: "25",
       pomodoroBreak: "5",
+      tasks: [], // Add tasks array
     }
   })
 
@@ -98,6 +102,7 @@ export default function RoutinesPage() {
         enablePomodoro: !!editingRoutine.pomodoro,
         pomodoroWork: editingRoutine.pomodoro ? String(editingRoutine.pomodoro.workDuration) : "25",
         pomodoroBreak: editingRoutine.pomodoro ? String(editingRoutine.pomodoro.breakDuration) : "5",
+        tasks: editingRoutine.tasks || [],
       })
     } else {
       form.reset({
@@ -108,6 +113,7 @@ export default function RoutinesPage() {
         enablePomodoro: true,
         pomodoroWork: "25",
         pomodoroBreak: "5",
+        tasks: [],
       })
     }
   }, [editingRoutine, form])
@@ -116,6 +122,26 @@ export default function RoutinesPage() {
   useEffect(() => {
     localStorage.setItem('routines', JSON.stringify(routines))
   }, [routines])
+
+  // Add task to form
+  const addTask = () => {
+    const tasks = form.getValues("tasks") || []
+    form.setValue("tasks", [
+      ...tasks,
+      {
+        id: Date.now(),
+        name: "",
+        duration: "15",
+        completed: false
+      }
+    ])
+  }
+
+  // Remove task from form
+  const removeTask = (taskId) => {
+    const tasks = form.getValues("tasks")
+    form.setValue("tasks", tasks.filter(task => task.id !== taskId))
+  }
 
   const onSubmit = (data) => {
     const routineData = {
@@ -128,6 +154,7 @@ export default function RoutinesPage() {
         workDuration: parseInt(data.pomodoroWork),
         breakDuration: parseInt(data.pomodoroBreak),
       } : null,
+      tasks: data.tasks,
       createdAt: editingRoutine?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -196,45 +223,68 @@ export default function RoutinesPage() {
               key={routine.id}
               className="material-elevation-1 p-4 state-layer-hover"
             >
-              <div className="flex items-center gap-4">
-                <Clock className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <h3 className="font-medium">{routine.name}</h3>
-                  <p className="text-sm text-foreground/60">
-                    {routine.duration} minutes • {ROUTINE_TYPES.find(t => t.value === routine.type)?.label}
-                  </p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <Clock className="w-5 h-5 text-primary" />
+                  <div className="flex-1">
+                    <h3 className="font-medium">{routine.name}</h3>
+                    <p className="text-sm text-foreground/60">
+                      {routine.duration} minutes • {ROUTINE_TYPES.find(t => t.value === routine.type)?.label}
+                    </p>
+                  </div>
+                  {routine.tasks?.length > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-foreground/60">
+                      <List className="w-4 h-4" />
+                      <span>{routine.tasks.length} tasks</span>
+                    </div>
+                  )}
+                  {routine.pomodoro && (
+                    <div className="flex items-center gap-2 text-sm text-foreground/60">
+                      <Timer className="w-4 h-4" />
+                      <span>{routine.pomodoro.workDuration}/{routine.pomodoro.breakDuration}</span>
+                    </div>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-foreground/60 hover:text-foreground"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-surface-container-high border-outline">
+                      <DropdownMenuItem 
+                        className="state-layer-hover"
+                        onClick={() => handleEdit(routine)}
+                      >
+                        Edit Routine
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="state-layer-hover text-error"
+                        onClick={() => handleDeleteClick(routine)}
+                      >
+                        Delete Routine
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                {routine.pomodoro && (
-                  <div className="flex items-center gap-2 text-sm text-foreground/60">
-                    <Timer className="w-4 h-4" />
-                    <span>{routine.pomodoro.workDuration}/{routine.pomodoro.breakDuration}</span>
+
+                {routine.tasks?.length > 0 && (
+                  <div className="pl-9 space-y-2">
+                    {routine.tasks.map((task, index) => (
+                      <div
+                        key={task.id}
+                        className="flex items-center gap-2 text-sm text-foreground/60"
+                      >
+                        <span className="w-5 text-right">{index + 1}.</span>
+                        <span>{task.name}</span>
+                        <span className="ml-auto">{task.duration}min</span>
+                      </div>
+                    ))}
                   </div>
                 )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-foreground/60 hover:text-foreground"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-surface-container-high border-outline">
-                    <DropdownMenuItem 
-                      className="state-layer-hover"
-                      onClick={() => handleEdit(routine)}
-                    >
-                      Edit Routine
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      className="state-layer-hover text-error"
-                      onClick={() => handleDeleteClick(routine)}
-                    >
-                      Delete Routine
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             </Card>
           ))}
@@ -382,6 +432,90 @@ export default function RoutinesPage() {
                     />
                   </div>
                 )}
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Tasks</FormLabel>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addTask}
+                      className="border-outline state-layer-hover"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Task
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {form.watch("tasks")?.map((task, index) => (
+                      <Card
+                        key={task.id}
+                        className="material-elevation-1 p-4"
+                      >
+                        <div className="flex items-center gap-4">
+                          <GripVertical className="w-5 h-5 text-foreground/40 cursor-move" />
+                          <div className="flex-1 space-y-2">
+                            <FormField
+                              control={form.control}
+                              name={`tasks.${index}.name`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="Task name..."
+                                      className="bg-surface-container-low border-outline"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <div className="flex gap-2">
+                              <FormField
+                                control={form.control}
+                                name={`tasks.${index}.duration`}
+                                render={({ field }) => (
+                                  <FormItem className="flex-1">
+                                    <Select
+                                      onValueChange={field.onChange}
+                                      defaultValue={field.value}
+                                    >
+                                      <SelectTrigger className="bg-surface-container-low border-outline">
+                                        <SelectValue placeholder="Duration" />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-surface-container-high border-outline">
+                                        {[5, 10, 15, 20, 25, 30, 45, 60].map((mins) => (
+                                          <SelectItem 
+                                            key={mins} 
+                                            value={String(mins)}
+                                            className="state-layer-hover"
+                                          >
+                                            {mins} minutes
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeTask(task.id)}
+                            className="text-error state-layer-hover"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
 
                 <DialogFooter>
                   <Button 
