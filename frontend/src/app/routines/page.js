@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import {
   Dialog,
@@ -13,388 +13,264 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormDescription,
+} from "@/components/ui/form"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import {
-  Play,
-  Pause,
-  RotateCcw,
-  GripVertical,
-  X,
-  Save,
-  LayoutTemplate,
-  Timer,
   Plus,
-  Check,
+  Save,
+  Clock,
+  Timer,
 } from "lucide-react"
 
-// Predefined templates
-const DEFAULT_TEMPLATES = {
-  morning: {
-    name: "Morning Routine",
-    routines: [
-      { id: 'm1', time: "07:00", activity: "Morning Meditation", duration: 15, progress: 0, isActive: false },
-      { id: 'm2', time: "07:15", activity: "Exercise", duration: 30, progress: 0, isActive: false },
-      { id: 'm3', time: "07:45", activity: "Breakfast & Planning", duration: 30, progress: 0, isActive: false },
-    ]
-  },
-  work: {
-    name: "Work Focus",
-    routines: [
-      { id: 'w1', time: "09:00", activity: "Email Check", duration: 15, progress: 0, isActive: false },
-      { id: 'w2', time: "09:15", activity: "Deep Work Session", duration: 90, progress: 0, isActive: false },
-      { id: 'w3', time: "10:45", activity: "Quick Break", duration: 15, progress: 0, isActive: false },
-    ]
-  },
-  evening: {
-    name: "Evening Winddown",
-    routines: [
-      { id: 'e1', time: "18:00", activity: "Day Review", duration: 15, progress: 0, isActive: false },
-      { id: 'e2', time: "18:15", activity: "Light Exercise", duration: 30, progress: 0, isActive: false },
-      { id: 'e3', time: "18:45", activity: "Reading", duration: 30, progress: 0, isActive: false },
-    ]
-  }
-}
+const ROUTINE_TYPES = [
+  { value: "focus", label: "Focus Work" },
+  { value: "exercise", label: "Exercise" },
+  { value: "study", label: "Study" },
+  { value: "meditation", label: "Meditation" },
+  { value: "reading", label: "Reading" },
+]
+
+const PRIORITY_LEVELS = [
+  { value: "low", label: "Low Priority", color: "text-jewel-emerald" },
+  { value: "medium", label: "Medium Priority", color: "text-jewel-topaz" },
+  { value: "high", label: "High Priority", color: "text-jewel-ruby" },
+  { value: "critical", label: "Critical", color: "text-error" },
+]
 
 export default function RoutinesPage() {
-  const [routines, setRoutines] = useState([
-    { id: 1, time: "09:00", activity: "Morning Meditation", duration: 15, progress: 0, isActive: false },
-    { id: 2, time: "09:30", activity: "Check Emails", duration: 30, progress: 0, isActive: false },
-    { id: 3, time: "10:30", activity: "Deep Work Session", duration: 60, progress: 0, isActive: false },
-  ])
-  const [draggedItem, setDraggedItem] = useState(null)
-  const [dragOverIndex, setDragOverIndex] = useState(null)
-  const [activeTimer, setActiveTimer] = useState(null)
-  const timerRef = useRef(null)
-  const timeoutRef = useRef(null)
-  const [templates, setTemplates] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('routineTemplates')
-      return saved ? { ...DEFAULT_TEMPLATES, ...JSON.parse(saved) } : DEFAULT_TEMPLATES
-    }
-    return DEFAULT_TEMPLATES
-  })
-  const [newTemplateName, setNewTemplateName] = useState("")
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const { toast } = useToast()
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      type: "focus",
+      duration: "25",
+      priority: "medium",
+      enablePomodoro: true,
+      pomodoroWork: "25",
+      pomodoroBreak: "5",
     }
-  }, [])
+  })
 
-  const startTimer = (routineId) => {
-    if (activeTimer) {
-      clearInterval(timerRef.current)
-      setRoutines(prev => prev.map(r => ({...r, isActive: false})))
-    }
-
-    setActiveTimer(routineId)
-    setRoutines(prev => prev.map(r => 
-      r.id === routineId ? {...r, isActive: true} : {...r, isActive: false}
-    ))
-
-    timerRef.current = setInterval(() => {
-      setRoutines(prev => {
-        const updatedRoutines = prev.map(r => {
-          if (r.id === routineId) {
-            const newProgress = Math.min(r.progress + (100 / (r.duration * 60)), 100)
-            if (newProgress === 100) {
-              clearInterval(timerRef.current)
-              toast({
-                title: "Routine Complete!",
-                description: `${r.activity} has been completed.`,
-              })
-            }
-            return {...r, progress: newProgress}
-          }
-          return r
-        })
-        return updatedRoutines
-      })
-    }, 1000)
-  }
-
-  const pauseTimer = () => {
-    clearInterval(timerRef.current)
-    setActiveTimer(null)
-    setRoutines(prev => prev.map(r => ({...r, isActive: false})))
-  }
-
-  const resetTimer = (routineId) => {
-    if (activeTimer === routineId) {
-      clearInterval(timerRef.current)
-      setActiveTimer(null)
-    }
-    setRoutines(prev => prev.map(r => 
-      r.id === routineId ? {...r, progress: 0, isActive: false} : r
-    ))
-  }
-
-  const handleDragStart = (e, routine) => {
-    setDraggedItem(routine)
-    e.currentTarget.classList.add('opacity-50', 'scale-105')
-    // Set custom drag image
-    const dragImage = e.currentTarget.cloneNode(true)
-    dragImage.classList.add('drag-ghost')
-    document.body.appendChild(dragImage)
-    e.dataTransfer.setDragImage(dragImage, 0, 0)
-    setTimeout(() => document.body.removeChild(dragImage), 0)
-  }
-
-  const handleDragEnd = (e) => {
-    e.currentTarget.classList.remove('opacity-50', 'scale-105')
-    setDragOverIndex(null)
-    setDraggedItem(null)
-  }
-
-  const handleDragOver = (e, index) => {
-    e.preventDefault()
-    if (draggedItem && dragOverIndex !== index) {
-      setDragOverIndex(index)
-      
-      // Debounce the reordering
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-      timeoutRef.current = setTimeout(() => {
-        const newRoutines = [...routines]
-        const draggedIndex = routines.findIndex(r => r.id === draggedItem.id)
-        newRoutines.splice(draggedIndex, 1)
-        newRoutines.splice(index, 0, draggedItem)
-        
-        // Recalculate times
-        newRoutines.forEach((routine, i) => {
-          if (i === 0) {
-            routine.time = "09:00"
-          } else {
-            const prevRoutine = newRoutines[i - 1]
-            const [prevHours, prevMinutes] = prevRoutine.time.split(":").map(Number)
-            const newMinutes = prevMinutes + prevRoutine.duration
-            const newHours = prevHours + Math.floor(newMinutes / 60)
-            routine.time = `${String(newHours).padStart(2, '0')}:${String(newMinutes % 60).padStart(2, '0')}`
-          }
-        })
-        
-        setRoutines(newRoutines)
-      }, 200)
-    }
-  }
-
-  const handleDragLeave = () => {
-    setDragOverIndex(null)
-  }
-
-  const applyTemplate = (templateRoutines) => {
-    const newRoutines = templateRoutines.map((routine, index) => ({
-      ...routine,
-      id: Date.now() + index,
-      progress: 0,
-      isActive: false
-    }))
-    setRoutines(newRoutines)
+  const onSubmit = (data) => {
+    // Handle routine creation
+    console.log(data)
+    setShowCreateModal(false)
     toast({
-      title: "Template Applied",
-      description: "Your routine has been updated with the selected template.",
+      title: "Routine Created",
+      description: "Your new routine has been created successfully.",
     })
-  }
-
-  const saveAsTemplate = () => {
-    if (!newTemplateName.trim()) return
-
-    const newTemplate = {
-      name: newTemplateName,
-      routines: routines.map(r => ({
-        ...r,
-        progress: 0,
-        isActive: false
-      }))
-    }
-
-    const newTemplates = {
-      ...templates,
-      [`custom_${Date.now()}`]: newTemplate
-    }
-
-    setTemplates(newTemplates)
-    localStorage.setItem('routineTemplates', JSON.stringify(newTemplates))
-    setSaveDialogOpen(false)
-    setNewTemplateName("")
-
-    toast({
-      title: "Template Saved",
-      description: "Your current routine has been saved as a template.",
-    })
+    form.reset()
   }
 
   return (
     <div className="min-h-screen bg-surface p-4">
       <Card className="max-w-4xl mx-auto p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-display">Daily Routine</h1>
-          <div className="flex gap-2">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button 
-                  variant="outline"
-                  className="border-outline state-layer-hover"
-                >
-                  <LayoutTemplate className="w-4 h-4 mr-2" />
-                  Templates
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-surface-container-high border-outline">
-                <DialogHeader>
-                  <DialogTitle className="font-display">Choose a Template</DialogTitle>
-                </DialogHeader>
-                <Tabs defaultValue="morning" className="w-full">
-                  <TabsList className="bg-surface-container w-full justify-start">
-                    <TabsTrigger value="morning">Morning</TabsTrigger>
-                    <TabsTrigger value="work">Work</TabsTrigger>
-                    <TabsTrigger value="evening">Evening</TabsTrigger>
-                    <TabsTrigger value="custom">Custom</TabsTrigger>
-                  </TabsList>
-                  <ScrollArea className="h-[400px] mt-4">
-                    {Object.entries(templates).map(([key, template]) => (
-                      <TabsContent key={key} value={key.split('_')[0]}>
-                        <Card 
-                          className="material-elevation-1 p-4 cursor-pointer state-layer-hover mb-4"
-                          onClick={() => applyTemplate(template.routines)}
-                        >
-                          <h3 className="font-display text-lg mb-2">{template.name}</h3>
-                          <div className="space-y-2">
-                            {template.routines.map(routine => (
-                              <div key={routine.id} className="flex gap-2 text-sm">
-                                <span className="text-primary w-16">{routine.time}</span>
-                                <span className="flex-1">{routine.activity}</span>
-                                <span className="text-foreground/60">{routine.duration}min</span>
-                              </div>
-                            ))}
-                          </div>
-                        </Card>
-                      </TabsContent>
-                    ))}
-                  </ScrollArea>
-                </Tabs>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  className="bg-primary-container text-primary state-layer-hover"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save as Template
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-surface-container-high border-outline">
-                <DialogHeader>
-                  <DialogTitle className="font-display">Save as Template</DialogTitle>
-                </DialogHeader>
-                <div className="py-4">
-                  <Input
-                    placeholder="Template name..."
-                    value={newTemplateName}
-                    onChange={(e) => setNewTemplateName(e.target.value)}
-                    className="bg-surface-container-low border-outline"
-                  />
-                </div>
-                <DialogFooter>
-                  <Button
-                    onClick={saveAsTemplate}
-                    className="bg-primary-container text-primary state-layer-hover"
-                  >
-                    <Check className="w-4 h-4 mr-2" />
-                    Save Template
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-        {/* Routines List */}
-        <div className="space-y-3">
-          {routines.map((routine, index) => (
-            <Card
-              key={routine.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, routine)}
-              onDragEnd={handleDragEnd}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              className={`material-elevation-1 p-4 transition-all duration-200
-                ${dragOverIndex === index ? 'translate-y-2 material-elevation-2' : ''}
-                ${draggedItem?.id === routine.id ? 'opacity-50' : ''}
-              `}
-            >
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-4">
-                  <GripVertical className="w-5 h-5 text-foreground/40 cursor-move" />
-                  <div className="w-20 font-display text-primary">
-                    {routine.time}
-                  </div>
-                  <div className="flex-1">{routine.activity}</div>
-                  <div className="flex items-center gap-2">
-                    <Timer className="w-4 h-4 text-foreground/60" />
-                    <span className="text-foreground/60">
-                      {routine.duration} min
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    {routine.isActive ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => pauseTimer()}
-                        className="text-primary state-layer-hover"
-                      >
-                        <Pause className="w-4 h-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => startTimer(routine.id)}
-                        className="text-primary state-layer-hover"
-                      >
-                        <Play className="w-4 h-4" />
-                      </Button>
+          <h1 className="text-3xl font-display">Daily Routines</h1>
+          <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary-container text-primary">
+                <Plus className="w-4 h-4 mr-2" />
+                New Routine
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-surface-container-high border-outline sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle className="font-display">Create New Routine</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Routine Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Enter routine name..." 
+                            className="bg-surface-container-low border-outline"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => resetTimer(routine.id)}
-                      className="text-primary state-layer-hover"
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Type</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="bg-surface-container-low border-outline">
+                              <SelectValue placeholder="Select routine type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-surface-container-high border-outline">
+                            {ROUTINE_TYPES.map(type => (
+                              <SelectItem 
+                                key={type.value} 
+                                value={type.value}
+                                className="state-layer-hover"
+                              >
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="duration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duration (minutes)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="5"
+                            className="bg-surface-container-low border-outline"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="priority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Priority Level</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="bg-surface-container-low border-outline">
+                              <SelectValue placeholder="Select priority" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-surface-container-high border-outline">
+                            {PRIORITY_LEVELS.map(priority => (
+                              <SelectItem 
+                                key={priority.value} 
+                                value={priority.value}
+                                className={`state-layer-hover ${priority.color}`}
+                              >
+                                {priority.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="enablePomodoro"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border border-outline p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Pomodoro Timer</FormLabel>
+                          <FormDescription>
+                            Enable Pomodoro technique for this routine
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("enablePomodoro") && (
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="pomodoroWork"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Work Duration (minutes)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="5"
+                                className="bg-surface-container-low border-outline"
+                                {...field}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="pomodoroBreak"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Break Duration (minutes)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="1"
+                                className="bg-surface-container-low border-outline"
+                                {...field}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  <DialogFooter>
+                    <Button 
+                      type="submit"
+                      className="bg-primary-container text-primary w-full"
                     >
-                      <RotateCcw className="w-4 h-4" />
+                      <Save className="w-4 h-4 mr-2" />
+                      Create Routine
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setRoutines(routines.filter(r => r.id !== routine.id))
-                        toast({
-                          title: "Activity Removed",
-                          description: "The routine activity has been removed.",
-                        })
-                      }}
-                      className="text-error state-layer-hover"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-                <Progress 
-                  value={routine.progress} 
-                  className="h-1 bg-surface-container-high"
-                  indicatorClassName="bg-primary"
-                />
-              </div>
-            </Card>
-          ))}
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
+
+        {/* Existing routines list */}
+        {/* ... */}
       </Card>
     </div>
   )
