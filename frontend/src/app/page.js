@@ -29,7 +29,7 @@ export default function Home() {
               variant="outline"
               className="border-outline state-layer-hover state-layer-active"
             >
-              <Link href="/about">Learn More</Link>
+              <Link href="/routines">Plan Your Day</Link>
             </Button>
           </div>
         </div>
