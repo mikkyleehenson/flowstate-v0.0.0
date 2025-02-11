@@ -9,9 +9,8 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-surface">
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 gradient-splash opacity-10 blur-3xl"></div>
-        <div className="container mx-auto px-4 py-24 relative">
+      <section className="relative">
+        <div className="container mx-auto px-4 py-24">
           <h1 className="text-7xl font-display mb-6 tracking-tight text-foreground">
             Flow<span className="text-jewel-amethyst">State</span>
           </h1>
@@ -19,10 +18,17 @@ export default function Home() {
             Your personalized ADHD productivity companion. Stay focused, organized, and accomplish more with tools designed for your unique way of thinking.
           </p>
           <div className="flex gap-4">
-            <Button size="lg" className="brutalist-border hover:rotate-1">
+            <Button 
+              size="lg" 
+              className="material-elevation-1 state-layer-hover state-layer-active"
+            >
               <Link href="/tasks">Get Started</Link>
             </Button>
-            <Button size="lg" variant="outline" className="brutalist-border hover:-rotate-1">
+            <Button 
+              size="lg" 
+              variant="outline"
+              className="state-layer-hover state-layer-active"
+            >
               <Link href="/about">Learn More</Link>
             </Button>
           </div>
@@ -54,7 +60,10 @@ export default function Home() {
               description: "Access specialized tools designed for ADHD minds"
             }
           ].map((feature, i) => (
-            <Card key={i} className="brutalist-card material-elevation-1">
+            <Card 
+              key={i} 
+              className="material-elevation-1 p-6 state-layer-hover"
+            >
               <div className="flex flex-col items-center text-center">
                 <div className="mb-4">{feature.icon}</div>
                 <h3 className="text-xl font-display mb-2">{feature.title}</h3>

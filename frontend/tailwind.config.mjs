@@ -20,38 +20,43 @@ const config = {
     },
     extend: {
       colors: {
-        jewel: {
-          sapphire: "#1E3799",
-          emerald: "#134E4A",
-          amethyst: "#6B46C1",
-          ruby: "#9B2C2C",
-          topaz: "#92400E",
-        },
+        // Material 3 Dark Theme Colors
         surface: {
-          DEFAULT: "#1A1A1A",
-          50: "#2D2D2D",
-          100: "#262626",
-          200: "#1F1F1F",
-          300: "#171717",
-          400: "#0F0F0F",
+          DEFAULT: "#121212",
+          dim: "#121212",
+          bright: "#1E1E1E",
+          container: {
+            lowest: "#121212",
+            low: "#1E1E1E",
+            DEFAULT: "#252525",
+            high: "#2E2E2E",
+            highest: "#383838",
+          }
         },
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "#D0BCFF",
+          foreground: "#381E72",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "#CCC2DC",
+          foreground: "#332D41",
         },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+        tertiary: {
+          DEFAULT: "#EFB8C8",
+          foreground: "#492532",
         },
+        // Jewel tones for accents
+        jewel: {
+          sapphire: "#B4C6FF",
+          emerald: "#7DDAC0",
+          amethyst: "#D0BCFF",
+          ruby: "#FFB4AB",
+          topaz: "#FFB87A",
+        },
+        error: "#FFB4AB",
+        outline: "#938F99",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -92,6 +97,11 @@ const config = {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+      },
+      boxShadow: {
+        'elevation-1': '0 1px 2px rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15)',
+        'elevation-2': '0 2px 6px rgba(0,0,0,0.15), 0 1px 6px 3px rgba(0,0,0,0.1)',
+        'elevation-3': '0 4px 8px rgba(0,0,0,0.15), 0 1px 8px 4px rgba(0,0,0,0.1)',
       },
     },
   },

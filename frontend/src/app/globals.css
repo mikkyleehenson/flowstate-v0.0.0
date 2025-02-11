@@ -4,35 +4,35 @@
  
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
+    --background: 0 0% 7%;
     --foreground: 0 0% 98%;
     
-    --card: 240 10% 3.9%;
+    --card: 0 0% 9%;
     --card-foreground: 0 0% 98%;
     
-    --popover: 240 10% 3.9%;
+    --popover: 0 0% 9%;
     --popover-foreground: 0 0% 98%;
     
-    --primary: 263 55% 52%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 267 100% 87%;
+    --primary-foreground: 267 71% 28%;
     
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 267 34% 81%;
+    --secondary-foreground: 267 22% 25%;
     
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 63%;
     
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 267 34% 81%;
+    --accent-foreground: 267 22% 25%;
     
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84% 83%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 267 100% 87%;
     
-    --radius: 0.5rem;
+    --radius: 1rem;
   }
 }
 
@@ -52,27 +52,23 @@
 }
 
 @layer utilities {
-  .gradient-splash {
-    @apply bg-gradient-to-br from-jewel-sapphire via-jewel-amethyst to-jewel-ruby;
-  }
-  
-  .gradient-vintage {
-    @apply bg-gradient-to-r from-jewel-topaz via-jewel-ruby to-jewel-amethyst;
-  }
-  
   .material-elevation-1 {
-    @apply shadow-lg bg-surface-50;
+    @apply bg-surface-container-low shadow-elevation-1;
   }
   
   .material-elevation-2 {
-    @apply shadow-xl bg-surface-100;
+    @apply bg-surface-container shadow-elevation-2;
   }
   
-  .brutalist-border {
-    @apply border-2 border-foreground;
+  .material-elevation-3 {
+    @apply bg-surface-container-high shadow-elevation-3;
   }
   
-  .brutalist-card {
-    @apply brutalist-border p-4 rotate-[0.5deg] hover:rotate-0 transition-transform;
+  .state-layer-hover {
+    @apply hover:bg-white/[0.08] transition-colors;
+  }
+  
+  .state-layer-active {
+    @apply active:bg-white/[0.12];
   }
 }
