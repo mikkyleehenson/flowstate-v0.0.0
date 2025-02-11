@@ -20,6 +20,13 @@ import {
   Clock,
   AlertCircle,
 } from "lucide-react"
+import { PomodoroTimer } from "@/components/ui/pomodoro-timer"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 const URGENCY_LEVELS = {
   low: { color: "text-jewel-emerald", bg: "bg-jewel-emerald/10" },
@@ -39,6 +46,8 @@ export default function CalendarPage() {
   const [view, setView] = useState("week")
   const [date, setDate] = useState(new Date())
   const [draggedItem, setDraggedItem] = useState(null)
+  const [activeItem, setActiveItem] = useState(null)
+  const [showTimer, setShowTimer] = useState(false)
 
   // Mock data for calendar items
   const [calendarItems] = useState([
@@ -89,6 +98,17 @@ export default function CalendarPage() {
     }
   }
 
+  const startItem = (item) => {
+    setActiveItem(item)
+    setShowTimer(true)
+  }
+
+  const handleTimerComplete = () => {
+    setShowTimer(false)
+    setActiveItem(null)
+    // Update item status in your data
+  }
+
   const renderTimeSlots = () => {
     const slots = []
     for (let hour = 6; hour < 22; hour++) {
@@ -108,6 +128,44 @@ export default function CalendarPage() {
     }
     return slots
   }
+
+  const renderCalendarItem = (item) => (
+    <div
+      key={item.id}
+      draggable
+      onDragStart={(e) => handleDragStart(e, item)}
+      onDragEnd={handleDragEnd}
+      className={`
+        p-2 rounded-md cursor-move
+        ${URGENCY_LEVELS[item.urgency].bg}
+        ${item.pomodoroEnabled ? 'border-l-4 border-primary' : ''}
+      `}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {ITEM_TYPES[item.type].icon && (
+            <ITEM_TYPES[item.type].icon 
+              className={`w-4 h-4 ${ITEM_TYPES[item.type].color}`} 
+            />
+          )}
+          <span className="font-medium">{item.title}</span>
+        </div>
+        {item.pomodoroEnabled && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => startItem(item)}
+            className="text-primary hover:text-primary/80"
+          >
+            Start
+          </Button>
+        )}
+      </div>
+      <div className="text-sm text-foreground/60 mt-1">
+        {item.time} • {item.duration}min
+      </div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-surface p-4">
@@ -168,6 +226,23 @@ export default function CalendarPage() {
           </TabsContent>
         </Tabs>
       </Card>
+
+      {/* Pomodoro Timer Dialog */}
+      <Dialog open={showTimer} onOpenChange={setShowTimer}>
+        <DialogContent className="bg-surface-container-high border-outline">
+          <DialogHeader>
+            <DialogTitle className="font-display">
+              {activeItem?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {activeItem && (
+            <PomodoroTimer
+              duration={activeItem.duration}
+              onComplete={handleTimerComplete}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
