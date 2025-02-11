@@ -47,9 +47,9 @@ export default function Home() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="border-outline">
-              <Link href="/routines">
-                <Timer className="w-4 h-4 mr-2" />
-                Start Routine
+              <Link href="/calendar">
+                <Calendar className="w-4 h-4 mr-2" />
+                Calendar
               </Link>
             </Button>
           </div>
