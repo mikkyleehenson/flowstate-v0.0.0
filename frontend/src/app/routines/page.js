@@ -35,6 +35,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import {
   Plus,
@@ -55,6 +65,7 @@ const ROUTINE_TYPES = [
 export default function RoutinesPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingRoutine, setEditingRoutine] = useState(null)
+  const [routineToDelete, setRoutineToDelete] = useState(null)
   const [routines, setRoutines] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('routines')
@@ -146,12 +157,19 @@ export default function RoutinesPage() {
     setShowModal(true)
   }
 
-  const handleDelete = (routineId) => {
-    setRoutines(prev => prev.filter(r => r.id !== routineId))
-    toast({
-      title: "Routine Deleted",
-      description: "Your routine has been removed.",
-    })
+  const handleDeleteClick = (routine) => {
+    setRoutineToDelete(routine)
+  }
+
+  const confirmDelete = () => {
+    if (routineToDelete) {
+      setRoutines(prev => prev.filter(r => r.id !== routineToDelete.id))
+      toast({
+        title: "Routine Deleted",
+        description: "Your routine has been removed successfully.",
+      })
+      setRoutineToDelete(null)
+    }
   }
 
   return (
@@ -211,7 +229,7 @@ export default function RoutinesPage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       className="state-layer-hover text-error"
-                      onClick={() => handleDelete(routine.id)}
+                      onClick={() => handleDeleteClick(routine)}
                     >
                       Delete Routine
                     </DropdownMenuItem>
@@ -378,6 +396,39 @@ export default function RoutinesPage() {
             </Form>
           </DialogContent>
         </Dialog>
+
+        {/* Add AlertDialog for delete confirmation */}
+        <AlertDialog 
+          open={!!routineToDelete} 
+          onOpenChange={() => setRoutineToDelete(null)}
+        >
+          <AlertDialogContent className="bg-surface-container-high border-outline">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-display text-xl">
+                Delete Routine
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-foreground/60">
+                Are you sure you want to delete "{routineToDelete?.name}"? 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2">
+              <AlertDialogCancel 
+                className="bg-surface-container-low border-outline text-foreground 
+                  hover:bg-surface-container state-layer-hover"
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-error text-error-foreground hover:bg-error/90 
+                  state-layer-hover"
+                onClick={confirmDelete}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </Card>
     </div>
   )
