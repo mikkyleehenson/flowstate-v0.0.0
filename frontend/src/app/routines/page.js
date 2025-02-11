@@ -4,13 +4,17 @@ import { useState, useRef, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
 import {
   Play,
@@ -21,7 +25,37 @@ import {
   Save,
   LayoutTemplate,
   Timer,
+  Plus,
+  Check,
 } from "lucide-react"
+
+// Predefined templates
+const DEFAULT_TEMPLATES = {
+  morning: {
+    name: "Morning Routine",
+    routines: [
+      { id: 'm1', time: "07:00", activity: "Morning Meditation", duration: 15, progress: 0, isActive: false },
+      { id: 'm2', time: "07:15", activity: "Exercise", duration: 30, progress: 0, isActive: false },
+      { id: 'm3', time: "07:45", activity: "Breakfast & Planning", duration: 30, progress: 0, isActive: false },
+    ]
+  },
+  work: {
+    name: "Work Focus",
+    routines: [
+      { id: 'w1', time: "09:00", activity: "Email Check", duration: 15, progress: 0, isActive: false },
+      { id: 'w2', time: "09:15", activity: "Deep Work Session", duration: 90, progress: 0, isActive: false },
+      { id: 'w3', time: "10:45", activity: "Quick Break", duration: 15, progress: 0, isActive: false },
+    ]
+  },
+  evening: {
+    name: "Evening Winddown",
+    routines: [
+      { id: 'e1', time: "18:00", activity: "Day Review", duration: 15, progress: 0, isActive: false },
+      { id: 'e2', time: "18:15", activity: "Light Exercise", duration: 30, progress: 0, isActive: false },
+      { id: 'e3', time: "18:45", activity: "Reading", duration: 30, progress: 0, isActive: false },
+    ]
+  }
+}
 
 export default function RoutinesPage() {
   const [routines, setRoutines] = useState([
@@ -34,6 +68,15 @@ export default function RoutinesPage() {
   const [activeTimer, setActiveTimer] = useState(null)
   const timerRef = useRef(null)
   const timeoutRef = useRef(null)
+  const [templates, setTemplates] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('routineTemplates')
+      return saved ? { ...DEFAULT_TEMPLATES, ...JSON.parse(saved) } : DEFAULT_TEMPLATES
+    }
+    return DEFAULT_TEMPLATES
+  })
+  const [newTemplateName, setNewTemplateName] = useState("")
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -142,25 +185,132 @@ export default function RoutinesPage() {
     setDragOverIndex(null)
   }
 
+  const applyTemplate = (templateRoutines) => {
+    const newRoutines = templateRoutines.map((routine, index) => ({
+      ...routine,
+      id: Date.now() + index,
+      progress: 0,
+      isActive: false
+    }))
+    setRoutines(newRoutines)
+    toast({
+      title: "Template Applied",
+      description: "Your routine has been updated with the selected template.",
+    })
+  }
+
+  const saveAsTemplate = () => {
+    if (!newTemplateName.trim()) return
+
+    const newTemplate = {
+      name: newTemplateName,
+      routines: routines.map(r => ({
+        ...r,
+        progress: 0,
+        isActive: false
+      }))
+    }
+
+    const newTemplates = {
+      ...templates,
+      [`custom_${Date.now()}`]: newTemplate
+    }
+
+    setTemplates(newTemplates)
+    localStorage.setItem('routineTemplates', JSON.stringify(newTemplates))
+    setSaveDialogOpen(false)
+    setNewTemplateName("")
+
+    toast({
+      title: "Template Saved",
+      description: "Your current routine has been saved as a template.",
+    })
+  }
+
   return (
     <div className="min-h-screen bg-surface p-4">
       <Card className="max-w-4xl mx-auto p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-display">Daily Routine</h1>
           <div className="flex gap-2">
-            <Button 
-              variant="outline"
-              className="border-outline state-layer-hover"
-            >
-              <LayoutTemplate className="w-4 h-4 mr-2" />
-              Templates
-            </Button>
-            <Button 
-              className="bg-primary-container text-primary state-layer-hover"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Save
-            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button 
+                  variant="outline"
+                  className="border-outline state-layer-hover"
+                >
+                  <LayoutTemplate className="w-4 h-4 mr-2" />
+                  Templates
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-surface-container-high border-outline">
+                <DialogHeader>
+                  <DialogTitle className="font-display">Choose a Template</DialogTitle>
+                </DialogHeader>
+                <Tabs defaultValue="morning" className="w-full">
+                  <TabsList className="bg-surface-container w-full justify-start">
+                    <TabsTrigger value="morning">Morning</TabsTrigger>
+                    <TabsTrigger value="work">Work</TabsTrigger>
+                    <TabsTrigger value="evening">Evening</TabsTrigger>
+                    <TabsTrigger value="custom">Custom</TabsTrigger>
+                  </TabsList>
+                  <ScrollArea className="h-[400px] mt-4">
+                    {Object.entries(templates).map(([key, template]) => (
+                      <TabsContent key={key} value={key.split('_')[0]}>
+                        <Card 
+                          className="material-elevation-1 p-4 cursor-pointer state-layer-hover mb-4"
+                          onClick={() => applyTemplate(template.routines)}
+                        >
+                          <h3 className="font-display text-lg mb-2">{template.name}</h3>
+                          <div className="space-y-2">
+                            {template.routines.map(routine => (
+                              <div key={routine.id} className="flex gap-2 text-sm">
+                                <span className="text-primary w-16">{routine.time}</span>
+                                <span className="flex-1">{routine.activity}</span>
+                                <span className="text-foreground/60">{routine.duration}min</span>
+                              </div>
+                            ))}
+                          </div>
+                        </Card>
+                      </TabsContent>
+                    ))}
+                  </ScrollArea>
+                </Tabs>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+              <DialogTrigger asChild>
+                <Button 
+                  className="bg-primary-container text-primary state-layer-hover"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save as Template
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-surface-container-high border-outline">
+                <DialogHeader>
+                  <DialogTitle className="font-display">Save as Template</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  <Input
+                    placeholder="Template name..."
+                    value={newTemplateName}
+                    onChange={(e) => setNewTemplateName(e.target.value)}
+                    className="bg-surface-container-low border-outline"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={saveAsTemplate}
+                    className="bg-primary-container text-primary state-layer-hover"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Save Template
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
