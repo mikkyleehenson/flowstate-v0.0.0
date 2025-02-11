@@ -1,10 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -12,14 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-} from "@/components/ui/form"
 import { useToast } from "@/hooks/use-toast"
-import { useForm } from "react-hook-form"
 import {
   PlusCircle,
   GripVertical,
@@ -34,56 +26,61 @@ export default function RoutinesPage() {
     { id: 2, time: "09:30", activity: "Check Emails", duration: 30 },
     { id: 3, time: "10:30", activity: "Deep Work Session", duration: 60 },
   ])
-
+  const [draggedItem, setDraggedItem] = useState(null)
+  const [dragOverIndex, setDragOverIndex] = useState(null)
+  const timeoutRef = useRef(null)
   const { toast } = useToast()
-  const form = useForm({
-    defaultValues: {
-      activity: "",
-      duration: "15"
+
+  const handleDragStart = (e, routine) => {
+    setDraggedItem(routine)
+    e.currentTarget.classList.add('opacity-50', 'scale-105')
+    // Set custom drag image
+    const dragImage = e.currentTarget.cloneNode(true)
+    dragImage.classList.add('drag-ghost')
+    document.body.appendChild(dragImage)
+    e.dataTransfer.setDragImage(dragImage, 0, 0)
+    setTimeout(() => document.body.removeChild(dragImage), 0)
+  }
+
+  const handleDragEnd = (e) => {
+    e.currentTarget.classList.remove('opacity-50', 'scale-105')
+    setDragOverIndex(null)
+    setDraggedItem(null)
+  }
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault()
+    if (draggedItem && dragOverIndex !== index) {
+      setDragOverIndex(index)
+      
+      // Debounce the reordering
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => {
+        const newRoutines = [...routines]
+        const draggedIndex = routines.findIndex(r => r.id === draggedItem.id)
+        newRoutines.splice(draggedIndex, 1)
+        newRoutines.splice(index, 0, draggedItem)
+        
+        // Recalculate times
+        newRoutines.forEach((routine, i) => {
+          if (i === 0) {
+            routine.time = "09:00"
+          } else {
+            const prevRoutine = newRoutines[i - 1]
+            const [prevHours, prevMinutes] = prevRoutine.time.split(":").map(Number)
+            const newMinutes = prevMinutes + prevRoutine.duration
+            const newHours = prevHours + Math.floor(newMinutes / 60)
+            routine.time = `${String(newHours).padStart(2, '0')}:${String(newMinutes % 60).padStart(2, '0')}`
+          }
+        })
+        
+        setRoutines(newRoutines)
+      }, 200)
     }
-  })
-
-  const onSubmit = (data) => {
-    const lastRoutine = routines[routines.length - 1]
-    const lastTime = lastRoutine ? lastRoutine.time : "09:00"
-    
-    const [hours, minutes] = lastTime.split(":").map(Number)
-    const newMinutes = minutes + Number(data.duration)
-    const newHours = hours + Math.floor(newMinutes / 60)
-    const finalMinutes = newMinutes % 60
-    
-    const newTime = `${String(newHours).padStart(2, '0')}:${String(finalMinutes).padStart(2, '0')}`
-    
-    setRoutines([
-      ...routines,
-      {
-        id: Date.now(),
-        time: newTime,
-        activity: data.activity,
-        duration: Number(data.duration),
-      },
-    ])
-    form.reset()
-    
-    toast({
-      title: "Activity Added",
-      description: "Your new routine activity has been added.",
-    })
   }
 
-  const saveRoutine = () => {
-    toast({
-      title: "Routine Saved",
-      description: "Your routine has been saved successfully.",
-    })
-  }
-
-  const removeRoutine = (id) => {
-    setRoutines(routines.filter(routine => routine.id !== id))
-    toast({
-      title: "Activity Removed",
-      description: "The routine activity has been removed.",
-    })
+  const handleDragLeave = () => {
+    setDragOverIndex(null)
   }
 
   return (
@@ -95,19 +92,18 @@ export default function RoutinesPage() {
             <Button 
               variant="outline"
               className="border-outline state-layer-hover"
-              onClick={() => {
-                toast({
-                  title: "Templates",
-                  description: "Template feature coming soon!",
-                })
-              }}
             >
               <LayoutTemplate className="w-4 h-4 mr-2" />
               Templates
             </Button>
             <Button 
-              onClick={saveRoutine}
               className="bg-primary-container text-primary state-layer-hover"
+              onClick={() => {
+                toast({
+                  title: "Routine Saved",
+                  description: "Your routine has been saved successfully.",
+                })
+              }}
             >
               <Save className="w-4 h-4 mr-2" />
               Save
@@ -115,59 +111,20 @@ export default function RoutinesPage() {
           </div>
         </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2 mb-6">
-            <FormField
-              control={form.control}
-              name="activity"
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormControl>
-                    <Input
-                      placeholder="Add a new activity..."
-                      {...field}
-                      className="bg-surface-container-low border-outline"
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="duration"
-              render={({ field }) => (
-                <FormItem>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-[180px] bg-surface-container-low border-outline">
-                        <SelectValue placeholder="Duration" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="bg-surface-container-high border-outline">
-                      {[15, 30, 45, 60, 90, 120].map((mins) => (
-                        <SelectItem key={mins} value={String(mins)}>
-                          {mins} minutes
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-            />
-            <Button 
-              type="submit"
-              className="bg-primary-container text-primary state-layer-hover state-layer-active"
-            >
-              <PlusCircle className="w-5 h-5 mr-1" /> Add
-            </Button>
-          </form>
-        </Form>
-
+        {/* Routines List */}
         <div className="space-y-3">
-          {routines.map((routine) => (
+          {routines.map((routine, index) => (
             <Card
               key={routine.id}
-              className="material-elevation-1 p-4 state-layer-hover"
+              draggable
+              onDragStart={(e) => handleDragStart(e, routine)}
+              onDragEnd={handleDragEnd}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              className={`material-elevation-1 p-4 transition-all duration-200 cursor-move
+                ${dragOverIndex === index ? 'translate-y-2 material-elevation-2' : ''}
+                ${draggedItem?.id === routine.id ? 'opacity-50' : ''}
+              `}
             >
               <div className="flex items-center gap-4">
                 <GripVertical className="w-5 h-5 text-foreground/40" />
@@ -181,7 +138,13 @@ export default function RoutinesPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => removeRoutine(routine.id)}
+                  onClick={() => {
+                    setRoutines(routines.filter(r => r.id !== routine.id))
+                    toast({
+                      title: "Activity Removed",
+                      description: "The routine activity has been removed.",
+                    })
+                  }}
                   className="text-error state-layer-hover"
                 >
                   <X className="w-4 h-4" />

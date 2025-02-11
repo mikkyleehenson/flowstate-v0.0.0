@@ -39,4 +39,20 @@
   .state-layer-active {
     @apply active:bg-white/[0.12];
   }
+  
+  .drag-ghost {
+    @apply opacity-0;
+  }
+  
+  .material-elevation-1 {
+    @apply shadow-sm bg-surface-container-low transition-shadow duration-200;
+  }
+  
+  .material-elevation-2 {
+    @apply shadow-md bg-surface-container transition-shadow duration-200;
+  }
+  
+  .state-layer-hover {
+    @apply hover:bg-white/[0.08] transition-colors duration-200;
+  }
 }
