@@ -5,6 +5,8 @@ import { useForm } from "react-hook-form"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -35,6 +37,14 @@ import {
   Timer,
   Trash2,
   GripVertical,
+  Brain,
+  Sun,
+  Moon,
+  Music2,
+  VolumeX,
+  Zap,
+  ListChecks,
+  MessageSquare,
 } from "lucide-react"
 
 const ROUTINE_TYPES = [
@@ -43,6 +53,30 @@ const ROUTINE_TYPES = [
   { value: "study", label: "Study" },
   { value: "meditation", label: "Meditation" },
   { value: "reading", label: "Reading" },
+]
+
+const ENERGY_LEVELS = [
+  { value: "low", label: "Low Energy", icon: Zap, color: "text-jewel-emerald" },
+  { value: "medium", label: "Medium Energy", icon: Zap, color: "text-jewel-topaz" },
+  { value: "high", label: "High Energy", icon: Zap, color: "text-jewel-ruby" },
+]
+
+const FOCUS_TYPES = [
+  { value: "deep", label: "Deep Work", icon: Brain },
+  { value: "shallow", label: "Light Work", icon: Brain },
+  { value: "physical", label: "Physical Activity", icon: Brain },
+]
+
+const ENVIRONMENT_NEEDS = [
+  { value: "quiet", label: "Quiet Space", icon: VolumeX },
+  { value: "music", label: "Background Music", icon: Music2 },
+  { value: "any", label: "Any Environment", icon: Music2 },
+]
+
+const TIME_PREFERENCES = [
+  { value: "morning", label: "Morning", icon: Sun },
+  { value: "afternoon", label: "Afternoon", icon: Sun },
+  { value: "evening", label: "Evening", icon: Moon },
 ]
 
 export default function RoutinesPage() {
@@ -95,6 +129,18 @@ export default function RoutinesPage() {
         id: Date.now(),
         name: "",
         duration: "15",
+        energyLevel: "medium",
+        focusType: "shallow",
+        environment: "any",
+        timePreference: "morning",
+        notes: "",
+        dependencies: [],
+        estimatedDuration: "15",
+        actualDuration: null,
+        successRate: null,
+        completionCount: 0,
+        breakPreference: "standard",
+        motivation: "",
       }
     ])
   }
@@ -189,11 +235,26 @@ export default function RoutinesPage() {
                     {routine.tasks.map((task, index) => (
                       <div
                         key={task.id}
-                        className="flex items-center gap-2 text-sm text-foreground/60"
+                        className="flex flex-col gap-2"
                       >
-                        <span className="w-5 text-right">{index + 1}.</span>
-                        <span>{task.name}</span>
-                        <span className="ml-auto">{task.duration}min</span>
+                        <div className="flex items-center justify-between">
+                          <span>{task.name}</span>
+                          <span>{task.duration}min</span>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          <Badge variant="outline" className={`${ENERGY_LEVELS.find(e => e.value === task.energyLevel)?.color}`}>
+                            {ENERGY_LEVELS.find(e => e.value === task.energyLevel)?.label}
+                          </Badge>
+                          <Badge variant="outline">
+                            {FOCUS_TYPES.find(f => f.value === task.focusType)?.label}
+                          </Badge>
+                          {task.notes && (
+                            <Badge variant="outline" className="flex items-center gap-1">
+                              <MessageSquare className="w-3 h-3" />
+                              Notes
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -320,6 +381,172 @@ export default function RoutinesPage() {
                                     ))}
                                   </SelectContent>
                                 </Select>
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name={`tasks.${index}.energyLevel`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Energy Level</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="bg-surface-container border-outline">
+                                        <SelectValue placeholder="Select energy level" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {ENERGY_LEVELS.map(level => (
+                                        <SelectItem 
+                                          key={level.value} 
+                                          value={level.value}
+                                          className="flex items-center gap-2"
+                                        >
+                                          <level.icon className={`w-4 h-4 ${level.color}`} />
+                                          {level.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name={`tasks.${index}.focusType`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Focus Type</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="bg-surface-container border-outline">
+                                        <SelectValue placeholder="Select focus type" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {FOCUS_TYPES.map(type => (
+                                        <SelectItem 
+                                          key={type.value} 
+                                          value={type.value}
+                                          className="flex items-center gap-2"
+                                        >
+                                          <type.icon className="w-4 h-4" />
+                                          {type.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name={`tasks.${index}.environment`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Environment</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="bg-surface-container border-outline">
+                                        <SelectValue placeholder="Select environment" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {ENVIRONMENT_NEEDS.map(env => (
+                                        <SelectItem 
+                                          key={env.value} 
+                                          value={env.value}
+                                          className="flex items-center gap-2"
+                                        >
+                                          <env.icon className="w-4 h-4" />
+                                          {env.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name={`tasks.${index}.timePreference`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Best Time</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="bg-surface-container border-outline">
+                                        <SelectValue placeholder="Select time" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {TIME_PREFERENCES.map(time => (
+                                        <SelectItem 
+                                          key={time.value} 
+                                          value={time.value}
+                                          className="flex items-center gap-2"
+                                        >
+                                          <time.icon className="w-4 h-4" />
+                                          {time.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <FormField
+                            control={form.control}
+                            name={`tasks.${index}.notes`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Notes & Instructions</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Add any helpful notes or instructions..."
+                                    className="bg-surface-container border-outline resize-none h-20"
+                                    {...field}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`tasks.${index}.motivation`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Motivation / Reward</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="What makes this task worthwhile?"
+                                    className="bg-surface-container border-outline"
+                                    {...field}
+                                  />
+                                </FormControl>
                               </FormItem>
                             )}
                           />
