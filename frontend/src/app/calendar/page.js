@@ -19,6 +19,8 @@ import {
   Plus,
   Clock,
   AlertCircle,
+  BookOpen,
+  Briefcase,
 } from "lucide-react"
 import { PomodoroTimer } from "@/components/ui/pomodoro-timer"
 import {
@@ -35,11 +37,19 @@ const URGENCY_LEVELS = {
   critical: { color: "text-error", bg: "bg-error/10" },
 }
 
-const ITEM_TYPES = {
-  routine: { icon: Clock, color: "text-jewel-sapphire" },
-  task: { icon: AlertCircle, color: "text-jewel-emerald" },
-  event: { icon: CalendarIcon, color: "text-jewel-amethyst" },
-  obligation: { icon: AlertCircle, color: "text-jewel-ruby" },
+// Define components for each item type
+const ItemTypeIcons = {
+  routine: Clock,
+  task: AlertCircle,
+  event: CalendarIcon,
+  obligation: Briefcase,
+}
+
+const ItemTypeStyles = {
+  routine: "text-jewel-sapphire",
+  task: "text-jewel-emerald",
+  event: "text-jewel-amethyst",
+  obligation: "text-jewel-ruby",
 }
 
 export default function CalendarPage() {
@@ -129,43 +139,47 @@ export default function CalendarPage() {
     return slots
   }
 
-  const renderCalendarItem = (item) => (
-    <div
-      key={item.id}
-      draggable
-      onDragStart={(e) => handleDragStart(e, item)}
-      onDragEnd={handleDragEnd}
-      className={`
-        p-2 rounded-md cursor-move
-        ${URGENCY_LEVELS[item.urgency].bg}
-        ${item.pomodoroEnabled ? 'border-l-4 border-primary' : ''}
-      `}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {ITEM_TYPES[item.type].icon && (
-            <ITEM_TYPES[item.type].icon 
-              className={`w-4 h-4 ${ITEM_TYPES[item.type].color}`} 
-            />
+  const renderCalendarItem = (item) => {
+    const IconComponent = ItemTypeIcons[item.type]
+
+    return (
+      <div
+        key={item.id}
+        draggable
+        onDragStart={(e) => handleDragStart(e, item)}
+        onDragEnd={handleDragEnd}
+        className={`
+          p-2 rounded-md cursor-move
+          ${URGENCY_LEVELS[item.urgency].bg}
+          ${item.pomodoroEnabled ? 'border-l-4 border-primary' : ''}
+        `}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {IconComponent && (
+              <IconComponent 
+                className={`w-4 h-4 ${ItemTypeStyles[item.type]}`} 
+              />
+            )}
+            <span className="font-medium">{item.title}</span>
+          </div>
+          {item.pomodoroEnabled && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => startItem(item)}
+              className="text-primary hover:text-primary/80"
+            >
+              Start
+            </Button>
           )}
-          <span className="font-medium">{item.title}</span>
         </div>
-        {item.pomodoroEnabled && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => startItem(item)}
-            className="text-primary hover:text-primary/80"
-          >
-            Start
-          </Button>
-        )}
+        <div className="text-sm text-foreground/60 mt-1">
+          {item.time} • {item.duration}min
+        </div>
       </div>
-      <div className="text-sm text-foreground/60 mt-1">
-        {item.time} • {item.duration}min
-      </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="min-h-screen bg-surface p-4">
@@ -210,6 +224,7 @@ export default function CalendarPage() {
           <TabsContent value="day" className="mt-4">
             <div className="space-y-1">
               {renderTimeSlots()}
+              {calendarItems.map(renderCalendarItem)}
             </div>
           </TabsContent>
 
