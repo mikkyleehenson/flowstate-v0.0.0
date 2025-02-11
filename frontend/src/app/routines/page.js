@@ -29,6 +29,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import {
   Plus,
@@ -47,7 +53,8 @@ const ROUTINE_TYPES = [
 ]
 
 export default function RoutinesPage() {
-  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [editingRoutine, setEditingRoutine] = useState(null)
   const [routines, setRoutines] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('routines')
@@ -69,14 +76,39 @@ export default function RoutinesPage() {
     }
   })
 
+  // Reset form when editing routine changes
+  useEffect(() => {
+    if (editingRoutine) {
+      form.reset({
+        name: editingRoutine.name,
+        type: editingRoutine.type,
+        duration: String(editingRoutine.duration),
+        priority: editingRoutine.priority,
+        enablePomodoro: !!editingRoutine.pomodoro,
+        pomodoroWork: editingRoutine.pomodoro ? String(editingRoutine.pomodoro.workDuration) : "25",
+        pomodoroBreak: editingRoutine.pomodoro ? String(editingRoutine.pomodoro.breakDuration) : "5",
+      })
+    } else {
+      form.reset({
+        name: "",
+        type: "focus",
+        duration: "25",
+        priority: "medium",
+        enablePomodoro: true,
+        pomodoroWork: "25",
+        pomodoroBreak: "5",
+      })
+    }
+  }, [editingRoutine, form])
+
   // Save routines to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('routines', JSON.stringify(routines))
   }, [routines])
 
   const onSubmit = (data) => {
-    const newRoutine = {
-      id: Date.now(),
+    const routineData = {
+      id: editingRoutine?.id || Date.now(),
       name: data.name,
       type: data.type,
       duration: parseInt(data.duration),
@@ -85,16 +117,40 @@ export default function RoutinesPage() {
         workDuration: parseInt(data.pomodoroWork),
         breakDuration: parseInt(data.pomodoroBreak),
       } : null,
-      createdAt: new Date().toISOString(),
+      createdAt: editingRoutine?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
 
-    setRoutines(prev => [...prev, newRoutine])
-    setShowCreateModal(false)
-    form.reset()
+    if (editingRoutine) {
+      setRoutines(prev => prev.map(r => 
+        r.id === editingRoutine.id ? routineData : r
+      ))
+      toast({
+        title: "Routine Updated",
+        description: "Your routine has been updated successfully.",
+      })
+    } else {
+      setRoutines(prev => [...prev, routineData])
+      toast({
+        title: "Routine Created",
+        description: "Your new routine has been added to your collection.",
+      })
+    }
 
+    setShowModal(false)
+    setEditingRoutine(null)
+  }
+
+  const handleEdit = (routine) => {
+    setEditingRoutine(routine)
+    setShowModal(true)
+  }
+
+  const handleDelete = (routineId) => {
+    setRoutines(prev => prev.filter(r => r.id !== routineId))
     toast({
-      title: "Routine Created",
-      description: "Your new routine has been added to your collection.",
+      title: "Routine Deleted",
+      description: "Your routine has been removed.",
     })
   }
 
@@ -103,159 +159,16 @@ export default function RoutinesPage() {
       <Card className="max-w-4xl mx-auto p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-display">Daily Routines</h1>
-          <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary-container text-primary">
-                <Plus className="w-4 h-4 mr-2" />
-                New Routine
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-surface-container-high border-outline sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle className="font-display">Create New Routine</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Routine Name</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Enter routine name..." 
-                            className="bg-surface-container-low border-outline"
-                            {...field}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Type</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="bg-surface-container-low border-outline">
-                              <SelectValue placeholder="Select routine type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="bg-surface-container-high border-outline">
-                            {ROUTINE_TYPES.map(type => (
-                              <SelectItem 
-                                key={type.value} 
-                                value={type.value}
-                                className="state-layer-hover"
-                              >
-                                {type.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="duration"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Duration (minutes)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min="5"
-                            className="bg-surface-container-low border-outline"
-                            {...field}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="enablePomodoro"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border border-outline p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Pomodoro Timer</FormLabel>
-                          <FormDescription>
-                            Enable Pomodoro technique for this routine
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  {form.watch("enablePomodoro") && (
-                    <div className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="pomodoroWork"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Work Duration (minutes)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min="5"
-                                className="bg-surface-container-low border-outline"
-                                {...field}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="pomodoroBreak"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Break Duration (minutes)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min="1"
-                                className="bg-surface-container-low border-outline"
-                                {...field}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  )}
-
-                  <DialogFooter>
-                    <Button 
-                      type="submit"
-                      className="bg-primary-container text-primary w-full"
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      Create Routine
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            className="bg-primary-container text-primary"
+            onClick={() => {
+              setEditingRoutine(null)
+              setShowModal(true)
+            }}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Routine
+          </Button>
         </div>
 
         {/* Routines List */}
@@ -263,7 +176,7 @@ export default function RoutinesPage() {
           {routines.map((routine) => (
             <Card
               key={routine.id}
-              className="material-elevation-1 p-4"
+              className="material-elevation-1 p-4 state-layer-hover"
             >
               <div className="flex items-center gap-4">
                 <Clock className="w-5 h-5 text-primary" />
@@ -279,13 +192,31 @@ export default function RoutinesPage() {
                     <span>{routine.pomodoro.workDuration}/{routine.pomodoro.breakDuration}</span>
                   </div>
                 )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-foreground/60 hover:text-foreground"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-foreground/60 hover:text-foreground"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-surface-container-high border-outline">
+                    <DropdownMenuItem 
+                      className="state-layer-hover"
+                      onClick={() => handleEdit(routine)}
+                    >
+                      Edit Routine
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="state-layer-hover text-error"
+                      onClick={() => handleDelete(routine.id)}
+                    >
+                      Delete Routine
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </Card>
           ))}
@@ -296,6 +227,157 @@ export default function RoutinesPage() {
             </div>
           )}
         </div>
+
+        {/* Create/Edit Dialog */}
+        <Dialog open={showModal} onOpenChange={setShowModal}>
+          <DialogContent className="bg-surface-container-high border-outline sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="font-display">
+                {editingRoutine ? 'Edit Routine' : 'Create New Routine'}
+              </DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Routine Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter routine name..." 
+                          className="bg-surface-container-low border-outline"
+                          {...field}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="bg-surface-container-low border-outline">
+                            <SelectValue placeholder="Select routine type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-surface-container-high border-outline">
+                          {ROUTINE_TYPES.map(type => (
+                            <SelectItem 
+                              key={type.value} 
+                              value={type.value}
+                              className="state-layer-hover"
+                            >
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duration (minutes)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="5"
+                          className="bg-surface-container-low border-outline"
+                          {...field}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="enablePomodoro"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border border-outline p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Pomodoro Timer</FormLabel>
+                        <FormDescription>
+                          Enable Pomodoro technique for this routine
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {form.watch("enablePomodoro") && (
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="pomodoroWork"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Work Duration (minutes)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="5"
+                              className="bg-surface-container-low border-outline"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="pomodoroBreak"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Break Duration (minutes)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="1"
+                              className="bg-surface-container-low border-outline"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button 
+                    type="submit"
+                    className="bg-primary-container text-primary w-full"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {editingRoutine ? 'Update Routine' : 'Create Routine'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </Card>
     </div>
   )
