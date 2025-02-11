@@ -5,24 +5,64 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { PlusCircle, GripVertical, X } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import {
+  PlusCircle,
+  GripVertical,
+  X,
+  Save,
+  Template,
+  Star,
+} from "lucide-react"
+
+// Predefined templates
+const ROUTINE_TEMPLATES = {
+  morning: [
+    { id: 'm1', time: "07:00", activity: "Morning Meditation", duration: 15 },
+    { id: 'm2', time: "07:15", activity: "Exercise", duration: 30 },
+    { id: 'm3', time: "08:00", activity: "Breakfast & Planning", duration: 30 },
+  ],
+  work: [
+    { id: 'w1', time: "09:00", activity: "Email Check", duration: 15 },
+    { id: 'w2', time: "09:30", activity: "Deep Work Session", duration: 90 },
+    { id: 'w3', time: "11:00", activity: "Team Meeting", duration: 30 },
+  ],
+  evening: [
+    { id: 'e1', time: "18:00", activity: "Review Day", duration: 15 },
+    { id: 'e2', time: "18:30", activity: "Wind Down Routine", duration: 45 },
+    { id: 'e3', time: "19:30", activity: "Reading", duration: 30 },
+  ],
+}
 
 export default function RoutinesPage() {
-  const [routines, setRoutines] = useState([
-    { id: 1, time: "09:00", activity: "Morning Meditation", duration: 15 },
-    { id: 2, time: "09:30", activity: "Check Emails", duration: 30 },
-    { id: 3, time: "10:30", activity: "Deep Work Session", duration: 60 },
-  ])
-
+  const [routines, setRoutines] = useState([])
   const [draggedItem, setDraggedItem] = useState(null)
   const [newActivity, setNewActivity] = useState("")
   const [newDuration, setNewDuration] = useState("15")
+  const [savedRoutines, setSavedRoutines] = useState([])
+  const { toast } = useToast()
+
+  // Load saved routines from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('savedRoutines')
+    if (saved) {
+      setSavedRoutines(JSON.parse(saved))
+    }
+  }, [])
 
   const handleDragStart = (e, item) => {
     setDraggedItem(item)
@@ -46,6 +86,31 @@ export default function RoutinesPage() {
       
       setRoutines(items)
     }
+  }
+
+  const applyTemplate = (templateRoutines) => {
+    setRoutines(templateRoutines.map(routine => ({
+      ...routine,
+      id: Date.now() + Math.random()
+    })))
+    toast({
+      title: "Template Applied",
+      description: "Your routine has been updated with the selected template.",
+    })
+  }
+
+  const saveCurrentRoutine = () => {
+    const newSaved = [...savedRoutines, {
+      id: Date.now(),
+      name: `Routine ${savedRoutines.length + 1}`,
+      routines: routines
+    }]
+    setSavedRoutines(newSaved)
+    localStorage.setItem('savedRoutines', JSON.stringify(newSaved))
+    toast({
+      title: "Routine Saved",
+      description: "Your current routine has been saved for future use.",
+    })
   }
 
   const addRoutine = () => {
@@ -80,9 +145,78 @@ export default function RoutinesPage() {
     <div className="min-h-screen bg-surface">
       <div className="max-w-4xl mx-auto p-4">
         <Card className="material-elevation-2 p-6">
-          <h1 className="text-3xl font-display mb-6 text-foreground">Daily Routine</h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-display text-foreground">Daily Routine</h1>
+            <div className="flex gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline"
+                    className="border-outline state-layer-hover"
+                  >
+                    <Template className="w-4 h-4 mr-2" />
+                    Templates
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-surface-container-high border-outline">
+                  <DialogHeader>
+                    <DialogTitle className="font-display text-foreground">Choose a Template</DialogTitle>
+                  </DialogHeader>
+                  <Tabs defaultValue="morning" className="w-full">
+                    <TabsList className="bg-surface-container">
+                      <TabsTrigger value="morning">Morning</TabsTrigger>
+                      <TabsTrigger value="work">Work</TabsTrigger>
+                      <TabsTrigger value="evening">Evening</TabsTrigger>
+                      <TabsTrigger value="saved">Saved</TabsTrigger>
+                    </TabsList>
+                    {Object.entries(ROUTINE_TEMPLATES).map(([key, templates]) => (
+                      <TabsContent key={key} value={key}>
+                        <Card className="material-elevation-1 p-4 cursor-pointer state-layer-hover"
+                              onClick={() => applyTemplate(templates)}>
+                          <div className="space-y-2">
+                            {templates.map(routine => (
+                              <div key={routine.id} className="flex gap-2 text-sm">
+                                <span className="text-primary">{routine.time}</span>
+                                <span>{routine.activity}</span>
+                                <span className="text-foreground/60">{routine.duration}min</span>
+                              </div>
+                            ))}
+                          </div>
+                        </Card>
+                      </TabsContent>
+                    ))}
+                    <TabsContent value="saved">
+                      <div className="space-y-2">
+                        {savedRoutines.map(saved => (
+                          <Card key={saved.id} 
+                                className="material-elevation-1 p-4 cursor-pointer state-layer-hover"
+                                onClick={() => applyTemplate(saved.routines)}>
+                            <h3 className="font-display mb-2">{saved.name}</h3>
+                            <div className="space-y-1">
+                              {saved.routines.map(routine => (
+                                <div key={routine.id} className="flex gap-2 text-sm">
+                                  <span className="text-primary">{routine.time}</span>
+                                  <span>{routine.activity}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </DialogContent>
+              </Dialog>
+              <Button 
+                onClick={saveCurrentRoutine}
+                className="bg-primary-container text-primary state-layer-hover"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save
+              </Button>
+            </div>
+          </div>
 
-          {/* Add Routine Input */}
           <div className="flex gap-2 mb-6">
             <Input
               placeholder="Add a new activity..."
@@ -114,7 +248,6 @@ export default function RoutinesPage() {
             </Button>
           </div>
 
-          {/* Routines List */}
           <div className="space-y-3">
             {routines.map((routine, index) => (
               <Card
