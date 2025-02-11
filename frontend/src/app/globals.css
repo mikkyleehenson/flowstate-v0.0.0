@@ -3,42 +3,8 @@
 @tailwind utilities;
  
 @layer base {
-  :root {
-    --background: 0 0% 7%;
-    --foreground: 0 0% 98%;
-    
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 98%;
-    
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 98%;
-    
-    --primary: 267 100% 87%;
-    --primary-foreground: 267 71% 28%;
-    
-    --secondary: 267 34% 81%;
-    --secondary-foreground: 267 22% 25%;
-    
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 63%;
-    
-    --accent: 267 34% 81%;
-    --accent-foreground: 267 22% 25%;
-    
-    --destructive: 0 84% 83%;
-    --destructive-foreground: 0 0% 98%;
-    
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 267 100% 87%;
-    
-    --radius: 1rem;
-  }
-}
-
-@layer base {
   * {
-    @apply border-border;
+    @apply border-outline;
   }
   body {
     @apply bg-surface text-foreground;
@@ -51,7 +17,7 @@
   }
 }
 
-@layer utilities {
+@layer components {
   .material-elevation-1 {
     @apply bg-surface-container-low shadow-elevation-1;
   }
@@ -63,7 +29,9 @@
   .material-elevation-3 {
     @apply bg-surface-container-high shadow-elevation-3;
   }
-  
+}
+
+@layer utilities {
   .state-layer-hover {
     @apply hover:bg-white/[0.08] transition-colors;
   }

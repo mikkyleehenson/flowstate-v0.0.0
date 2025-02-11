@@ -11,8 +11,8 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative">
         <div className="container mx-auto px-4 py-24">
-          <h1 className="text-7xl font-display mb-6 tracking-tight text-foreground">
-            Flow<span className="text-jewel-amethyst">State</span>
+          <h1 className="text-7xl font-display mb-6 tracking-tight">
+            Flow<span className="text-primary">State</span>
           </h1>
           <p className="text-xl mb-8 text-foreground/80 max-w-2xl font-content">
             Your personalized ADHD productivity companion. Stay focused, organized, and accomplish more with tools designed for your unique way of thinking.
@@ -20,14 +20,14 @@ export default function Home() {
           <div className="flex gap-4">
             <Button 
               size="lg" 
-              className="material-elevation-1 state-layer-hover state-layer-active"
+              className="bg-primary-container text-primary state-layer-hover state-layer-active"
             >
               <Link href="/tasks">Get Started</Link>
             </Button>
             <Button 
               size="lg" 
               variant="outline"
-              className="state-layer-hover state-layer-active"
+              className="border-outline state-layer-hover state-layer-active"
             >
               <Link href="/about">Learn More</Link>
             </Button>
