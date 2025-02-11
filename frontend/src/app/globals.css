@@ -52,7 +52,17 @@
     @apply shadow-md bg-surface-container transition-shadow duration-200;
   }
   
+  .material-elevation-3 {
+    @apply shadow-lg bg-surface-container-high transition-shadow duration-200;
+  }
+  
   .state-layer-hover {
     @apply hover:bg-white/[0.08] transition-colors duration-200;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  .pb-16 {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 }
