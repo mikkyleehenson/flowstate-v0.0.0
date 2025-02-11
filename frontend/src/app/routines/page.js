@@ -29,15 +29,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import {
   Plus,
   Save,
   Clock,
   Timer,
-  Template,
-  Star,
+  MoreVertical,
 } from "lucide-react"
 
 const ROUTINE_TYPES = [
@@ -48,25 +46,17 @@ const ROUTINE_TYPES = [
   { value: "reading", label: "Reading" },
 ]
 
-const PRIORITY_LEVELS = [
-  { value: "low", label: "Low Priority", color: "text-jewel-emerald" },
-  { value: "medium", label: "Medium Priority", color: "text-jewel-topaz" },
-  { value: "high", label: "High Priority", color: "text-jewel-ruby" },
-  { value: "critical", label: "Critical", color: "text-error" },
-]
-
 export default function RoutinesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [saveAsTemplate, setSaveAsTemplate] = useState(false)
-  const [templates, setTemplates] = useState(() => {
+  const [routines, setRoutines] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('routineTemplates')
-      return saved ? JSON.parse(saved) : {}
+      const saved = localStorage.getItem('routines')
+      return saved ? JSON.parse(saved) : []
     }
-    return {}
+    return []
   })
-  const { toast } = useToast()
   
+  const { toast } = useToast()
   const form = useForm({
     defaultValues: {
       name: "",
@@ -76,13 +66,17 @@ export default function RoutinesPage() {
       enablePomodoro: true,
       pomodoroWork: "25",
       pomodoroBreak: "5",
-      templateName: "",
-      templateCategory: "custom",
     }
   })
 
+  // Save routines to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('routines', JSON.stringify(routines))
+  }, [routines])
+
   const onSubmit = (data) => {
-    const routineData = {
+    const newRoutine = {
+      id: Date.now(),
       name: data.name,
       type: data.type,
       duration: parseInt(data.duration),
@@ -91,106 +85,18 @@ export default function RoutinesPage() {
         workDuration: parseInt(data.pomodoroWork),
         breakDuration: parseInt(data.pomodoroBreak),
       } : null,
+      createdAt: new Date().toISOString(),
     }
 
-    if (saveAsTemplate) {
-      const templateKey = `${data.templateCategory}_${Date.now()}`
-      const newTemplate = {
-        name: data.templateName || data.name,
-        category: data.templateCategory,
-        routine: routineData,
-      }
-
-      const updatedTemplates = {
-        ...templates,
-        [templateKey]: newTemplate,
-      }
-
-      setTemplates(updatedTemplates)
-      localStorage.setItem('routineTemplates', JSON.stringify(updatedTemplates))
-
-      toast({
-        title: "Template Saved",
-        description: "Your routine template has been saved successfully.",
-      })
-    }
-
+    setRoutines(prev => [...prev, newRoutine])
     setShowCreateModal(false)
     form.reset()
+
+    toast({
+      title: "Routine Created",
+      description: "Your new routine has been added to your collection.",
+    })
   }
-
-  // Add template saving section to the form
-  const renderTemplateSection = () => (
-    <div className="space-y-4 border-t border-outline/20 pt-4 mt-4">
-      <FormField
-        control={form.control}
-        name="saveAsTemplate"
-        render={({ field }) => (
-          <FormItem className="flex flex-row items-center justify-between rounded-lg border border-outline p-4">
-            <div className="space-y-0.5">
-              <FormLabel className="text-base">Save as Template</FormLabel>
-              <FormDescription>
-                Save this routine as a reusable template
-              </FormDescription>
-            </div>
-            <FormControl>
-              <Switch
-                checked={saveAsTemplate}
-                onCheckedChange={setSaveAsTemplate}
-              />
-            </FormControl>
-          </FormItem>
-        )}
-      />
-
-      {saveAsTemplate && (
-        <>
-          <FormField
-            control={form.control}
-            name="templateName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Template Name</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Enter template name..."
-                    className="bg-surface-container-low border-outline"
-                    {...field}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="templateCategory"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Template Category</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger className="bg-surface-container-low border-outline">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="bg-surface-container-high border-outline">
-                    <SelectItem value="morning">Morning Routines</SelectItem>
-                    <SelectItem value="work">Work Routines</SelectItem>
-                    <SelectItem value="evening">Evening Routines</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )}
-          />
-        </>
-      )}
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-surface p-4">
@@ -278,37 +184,6 @@ export default function RoutinesPage() {
 
                   <FormField
                     control={form.control}
-                    name="priority"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Priority Level</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="bg-surface-container-low border-outline">
-                              <SelectValue placeholder="Select priority" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="bg-surface-container-high border-outline">
-                            {PRIORITY_LEVELS.map(priority => (
-                              <SelectItem 
-                                key={priority.value} 
-                                value={priority.value}
-                                className={`state-layer-hover ${priority.color}`}
-                              >
-                                {priority.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
                     name="enablePomodoro"
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border border-outline p-4">
@@ -368,15 +243,13 @@ export default function RoutinesPage() {
                     </div>
                   )}
 
-                  {renderTemplateSection()}
-
                   <DialogFooter>
                     <Button 
                       type="submit"
                       className="bg-primary-container text-primary w-full"
                     >
                       <Save className="w-4 h-4 mr-2" />
-                      {saveAsTemplate ? 'Save as Template' : 'Create Routine'}
+                      Create Routine
                     </Button>
                   </DialogFooter>
                 </form>
@@ -385,8 +258,44 @@ export default function RoutinesPage() {
           </Dialog>
         </div>
 
-        {/* Existing routines list */}
-        {/* ... */}
+        {/* Routines List */}
+        <div className="space-y-3">
+          {routines.map((routine) => (
+            <Card
+              key={routine.id}
+              className="material-elevation-1 p-4"
+            >
+              <div className="flex items-center gap-4">
+                <Clock className="w-5 h-5 text-primary" />
+                <div className="flex-1">
+                  <h3 className="font-medium">{routine.name}</h3>
+                  <p className="text-sm text-foreground/60">
+                    {routine.duration} minutes • {ROUTINE_TYPES.find(t => t.value === routine.type)?.label}
+                  </p>
+                </div>
+                {routine.pomodoro && (
+                  <div className="flex items-center gap-2 text-sm text-foreground/60">
+                    <Timer className="w-4 h-4" />
+                    <span>{routine.pomodoro.workDuration}/{routine.pomodoro.breakDuration}</span>
+                  </div>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-foreground/60 hover:text-foreground"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </div>
+            </Card>
+          ))}
+
+          {routines.length === 0 && (
+            <div className="text-center py-8 text-foreground/60">
+              <p>No routines yet. Create your first routine to get started!</p>
+            </div>
+          )}
+        </div>
       </Card>
     </div>
   )
