@@ -4,15 +4,9 @@ import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { DndContext, closestCenter } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -35,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import {
   Plus,
@@ -43,15 +38,23 @@ import {
   Timer,
   Trash2,
   GripVertical,
-  Brain,
-  Sun,
-  Moon,
-  Music2,
-  VolumeX,
-  Zap,
-  ListChecks,
-  MessageSquare,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react"
+
+// Form validation schema
+const taskSchema = z.object({
+  name: z.string().min(1, "Task name is required"),
+  duration: z.string().min(1, "Duration is required"),
+  energyLevel: z.string(),
+  notes: z.string().optional(),
+})
+
+const routineSchema = z.object({
+  name: z.string().min(1, "Routine name is required"),
+  type: z.string(),
+  tasks: z.array(taskSchema),
+})
 
 const ROUTINE_TYPES = [
   { value: "focus", label: "Focus Work" },
@@ -62,134 +65,17 @@ const ROUTINE_TYPES = [
 ]
 
 const ENERGY_LEVELS = [
-  { value: "low", label: "Low Energy", icon: Zap, color: "text-jewel-emerald" },
-  { value: "medium", label: "Medium Energy", icon: Zap, color: "text-jewel-topaz" },
-  { value: "high", label: "High Energy", icon: Zap, color: "text-jewel-ruby" },
+  { value: "low", label: "Low Energy", color: "bg-jewel-emerald/20 text-jewel-emerald" },
+  { value: "medium", label: "Medium Energy", color: "bg-jewel-topaz/20 text-jewel-topaz" },
+  { value: "high", label: "High Energy", color: "bg-jewel-ruby/20 text-jewel-ruby" },
 ]
 
-const FOCUS_TYPES = [
-  { value: "deep", label: "Deep Work", icon: Brain },
-  { value: "shallow", label: "Light Work", icon: Brain },
-  { value: "physical", label: "Physical Activity", icon: Brain },
-]
-
-const ENVIRONMENT_NEEDS = [
-  { value: "quiet", label: "Quiet Space", icon: VolumeX },
-  { value: "music", label: "Background Music", icon: Music2 },
-  { value: "any", label: "Any Environment", icon: Music2 },
-]
-
-const TIME_PREFERENCES = [
-  { value: "morning", label: "Morning", icon: Sun },
-  { value: "afternoon", label: "Afternoon", icon: Sun },
-  { value: "evening", label: "Evening", icon: Moon },
-]
-
-// Form validation schema
-const taskSchema = z.object({
-  name: z.string().min(1, "Task name is required"),
-  duration: z.string().min(1, "Duration is required"),
-  energyLevel: z.string(),
-  focusType: z.string(),
-  environment: z.string(),
-  timePreference: z.string(),
-  notes: z.string(),
-  motivation: z.string(),
-  dependencies: z.array(z.string()),
-  successRate: z.number().min(0).max(100).optional(),
-  completionCount: z.number().min(0).optional(),
-  breakPreference: z.object({
-    type: z.enum(["standard", "custom"]),
-    workDuration: z.number().min(5),
-    breakDuration: z.number().min(1),
-    longBreakInterval: z.number().min(1),
-    longBreakDuration: z.number().min(5),
-  }),
-})
-
-const routineSchema = z.object({
-  name: z.string().min(1, "Routine name is required"),
-  type: z.string(),
-  tasks: z.array(taskSchema),
-})
-
-// Break preference options
-const BREAK_PREFERENCES = {
-  standard: {
-    workDuration: 25,
-    breakDuration: 5,
-    longBreakInterval: 4,
-    longBreakDuration: 15,
-  },
-  custom: {
-    workDuration: 45,
-    breakDuration: 10,
-    longBreakInterval: 3,
-    longBreakDuration: 20,
-  },
-}
-
-// Sortable task component
-function SortableTask({ task, index, ...props }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: task.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
+function EnergyLevelBadge({ level }) {
+  const energyLevel = ENERGY_LEVELS.find(e => e.value === level)
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Card className="p-4 bg-surface-container-low cursor-move">
-        <div className="flex items-center gap-4">
-          <GripVertical className="w-5 h-5 text-foreground/40" />
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <EnergyLevelIndicator level={task.energyLevel} />
-              <span>{task.name}</span>
-              {task.successRate !== null && (
-                <Badge variant="outline" className="ml-auto">
-                  {task.successRate}% Success
-                </Badge>
-              )}
-            </div>
-            {task.dependencies?.length > 0 && (
-              <div className="mt-2 flex gap-2">
-                {task.dependencies.map(depId => {
-                  const depTask = props.tasks.find(t => t.id === depId)
-                  return (
-                    <Badge key={depId} variant="outline" className="text-xs">
-                      Requires: {depTask?.name}
-                    </Badge>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-// Energy level indicator component
-function EnergyLevelIndicator({ level }) {
-  const colors = {
-    low: "bg-jewel-emerald/20 text-jewel-emerald",
-    medium: "bg-jewel-topaz/20 text-jewel-topaz",
-    high: "bg-jewel-ruby/20 text-jewel-ruby",
-  }
-
-  return (
-    <div className={`px-2 py-1 rounded-full text-xs font-medium ${colors[level]}`}>
-      {level.charAt(0).toUpperCase() + level.slice(1)}
-    </div>
+    <Badge className={`${energyLevel?.color} border-none`}>
+      {energyLevel?.label}
+    </Badge>
   )
 }
 
@@ -245,18 +131,7 @@ export default function RoutinesPage() {
         name: "",
         duration: "15",
         energyLevel: "medium",
-        focusType: "shallow",
-        environment: "any",
-        timePreference: "morning",
         notes: "",
-        dependencies: [],
-        successRate: null,
-        completionCount: 0,
-        breakPreference: {
-          type: "standard",
-          ...BREAK_PREFERENCES.standard
-        },
-        motivation: "",
       }
     ])
   }
@@ -266,21 +141,137 @@ export default function RoutinesPage() {
     form.setValue("tasks", currentTasks.filter((_, index) => index !== taskIndex))
   }
 
-  // Handle task reordering
-  const handleDragEnd = (event) => {
-    const { active, over } = event
-    if (active.id !== over.id) {
-      const tasks = form.getValues("tasks")
-      const oldIndex = tasks.findIndex(t => t.id === active.id)
-      const newIndex = tasks.findIndex(t => t.id === over.id)
-      
+  const moveTask = (index, direction) => {
+    const tasks = form.getValues("tasks")
+    const newIndex = direction === "up" ? index - 1 : index + 1
+    
+    if (newIndex >= 0 && newIndex < tasks.length) {
       const newTasks = [...tasks]
-      const [movedTask] = newTasks.splice(oldIndex, 1)
-      newTasks.splice(newIndex, 0, movedTask)
-      
+      const temp = newTasks[index]
+      newTasks[index] = newTasks[newIndex]
+      newTasks[newIndex] = temp
       form.setValue("tasks", newTasks)
     }
   }
+
+  const renderTaskCard = (task, index) => (
+    <Card key={task.id} className="p-4 bg-surface-container-low">
+      <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => moveTask(index, "up")}
+            disabled={index === 0}
+            className="h-6 w-6"
+          >
+            <ArrowUp className="w-4 h-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => moveTask(index, "down")}
+            disabled={index === form.getValues("tasks").length - 1}
+            className="h-6 w-6"
+          >
+            <ArrowDown className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="flex-1 space-y-4">
+          <FormField
+            control={form.control}
+            name={`tasks.${index}.name`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Task Name</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Enter task name..." 
+                    className="bg-surface-container-low border-outline"
+                    {...field}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`tasks.${index}.duration`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Duration (minutes)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number"
+                    placeholder="Enter duration" 
+                    className="bg-surface-container-low border-outline"
+                    {...field}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`tasks.${index}.energyLevel`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Energy Level</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-surface-container border-outline">
+                      <SelectValue placeholder="Select energy level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="!bg-surface-container-high border-outline">
+                    {ENERGY_LEVELS.map(level => (
+                      <SelectItem 
+                        key={level.value} 
+                        value={level.value}
+                        className="state-layer-hover"
+                      >
+                        <EnergyLevelBadge level={level.value} />
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`tasks.${index}.notes`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Notes (Optional)</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Additional notes..." 
+                    className="bg-surface-container-low border-outline"
+                    {...field}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => removeTask(index)}
+          className="text-error state-layer-hover"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+    </Card>
+  )
 
   const onSubmit = (data) => {
     const totalDuration = data.tasks.reduce((sum, task) => sum + parseInt(task.duration), 0)
@@ -374,15 +365,9 @@ export default function RoutinesPage() {
                           <span>{task.duration}min</span>
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                          <Badge variant="outline" className={`${ENERGY_LEVELS.find(e => e.value === task.energyLevel)?.color}`}>
-                            {ENERGY_LEVELS.find(e => e.value === task.energyLevel)?.label}
-                          </Badge>
-                          <Badge variant="outline">
-                            {FOCUS_TYPES.find(f => f.value === task.focusType)?.label}
-                          </Badge>
+                          <EnergyLevelBadge level={task.energyLevel} />
                           {task.notes && (
-                            <Badge variant="outline" className="flex items-center gap-1">
-                              <MessageSquare className="w-3 h-3" />
+                            <Badge variant="outline">
                               Notes
                             </Badge>
                           )}
@@ -468,24 +453,7 @@ export default function RoutinesPage() {
                     </Button>
                   </div>
 
-                  <DndContext
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <SortableContext
-                      items={form.watch("tasks")}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {form.watch("tasks")?.map((task, index) => (
-                        <SortableTask 
-                          key={task.id} 
-                          task={task} 
-                          index={index} 
-                          tasks={form.watch("tasks")}
-                        />
-                      ))}
-                    </SortableContext>
-                  </DndContext>
+                  {form.watch("tasks")?.map((task, index) => renderTaskCard(task, index))}
                 </div>
 
                 <DialogFooter>

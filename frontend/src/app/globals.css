@@ -31,11 +31,15 @@
   }
 
   .select-content {
-    @apply bg-surface-container-high border border-outline;
+    @apply bg-surface-container-high border border-outline rounded-md shadow-md;
   }
 
   .energy-level-dropdown {
     @apply bg-surface-container-high border border-outline;
+  }
+
+  .energy-level-badge {
+    @apply px-2 py-1 rounded-full text-sm font-medium;
   }
 }
 
@@ -77,4 +81,8 @@
   .pb-16 {
     padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
+}
+
+[data-radix-popper-content-wrapper] {
+  @apply !bg-transparent;
 }
