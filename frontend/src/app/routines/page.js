@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { DndContext, closestCenter } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -79,6 +85,114 @@ const TIME_PREFERENCES = [
   { value: "evening", label: "Evening", icon: Moon },
 ]
 
+// Form validation schema
+const taskSchema = z.object({
+  name: z.string().min(1, "Task name is required"),
+  duration: z.string().min(1, "Duration is required"),
+  energyLevel: z.string(),
+  focusType: z.string(),
+  environment: z.string(),
+  timePreference: z.string(),
+  notes: z.string(),
+  motivation: z.string(),
+  dependencies: z.array(z.string()),
+  successRate: z.number().min(0).max(100).optional(),
+  completionCount: z.number().min(0).optional(),
+  breakPreference: z.object({
+    type: z.enum(["standard", "custom"]),
+    workDuration: z.number().min(5),
+    breakDuration: z.number().min(1),
+    longBreakInterval: z.number().min(1),
+    longBreakDuration: z.number().min(5),
+  }),
+})
+
+const routineSchema = z.object({
+  name: z.string().min(1, "Routine name is required"),
+  type: z.string(),
+  tasks: z.array(taskSchema),
+})
+
+// Break preference options
+const BREAK_PREFERENCES = {
+  standard: {
+    workDuration: 25,
+    breakDuration: 5,
+    longBreakInterval: 4,
+    longBreakDuration: 15,
+  },
+  custom: {
+    workDuration: 45,
+    breakDuration: 10,
+    longBreakInterval: 3,
+    longBreakDuration: 20,
+  },
+}
+
+// Sortable task component
+function SortableTask({ task, index, ...props }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: task.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <Card className="p-4 bg-surface-container-low cursor-move">
+        <div className="flex items-center gap-4">
+          <GripVertical className="w-5 h-5 text-foreground/40" />
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <EnergyLevelIndicator level={task.energyLevel} />
+              <span>{task.name}</span>
+              {task.successRate !== null && (
+                <Badge variant="outline" className="ml-auto">
+                  {task.successRate}% Success
+                </Badge>
+              )}
+            </div>
+            {task.dependencies?.length > 0 && (
+              <div className="mt-2 flex gap-2">
+                {task.dependencies.map(depId => {
+                  const depTask = props.tasks.find(t => t.id === depId)
+                  return (
+                    <Badge key={depId} variant="outline" className="text-xs">
+                      Requires: {depTask?.name}
+                    </Badge>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// Energy level indicator component
+function EnergyLevelIndicator({ level }) {
+  const colors = {
+    low: "bg-jewel-emerald/20 text-jewel-emerald",
+    medium: "bg-jewel-topaz/20 text-jewel-topaz",
+    high: "bg-jewel-ruby/20 text-jewel-ruby",
+  }
+
+  return (
+    <div className={`px-2 py-1 rounded-full text-xs font-medium ${colors[level]}`}>
+      {level.charAt(0).toUpperCase() + level.slice(1)}
+    </div>
+  )
+}
+
 export default function RoutinesPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingRoutine, setEditingRoutine] = useState(null)
@@ -92,6 +206,7 @@ export default function RoutinesPage() {
   
   const { toast } = useToast()
   const form = useForm({
+    resolver: zodResolver(routineSchema),
     defaultValues: {
       name: "",
       type: "focus",
@@ -135,11 +250,12 @@ export default function RoutinesPage() {
         timePreference: "morning",
         notes: "",
         dependencies: [],
-        estimatedDuration: "15",
-        actualDuration: null,
         successRate: null,
         completionCount: 0,
-        breakPreference: "standard",
+        breakPreference: {
+          type: "standard",
+          ...BREAK_PREFERENCES.standard
+        },
         motivation: "",
       }
     ])
@@ -148,6 +264,22 @@ export default function RoutinesPage() {
   const removeTask = (taskIndex) => {
     const currentTasks = form.getValues("tasks")
     form.setValue("tasks", currentTasks.filter((_, index) => index !== taskIndex))
+  }
+
+  // Handle task reordering
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    if (active.id !== over.id) {
+      const tasks = form.getValues("tasks")
+      const oldIndex = tasks.findIndex(t => t.id === active.id)
+      const newIndex = tasks.findIndex(t => t.id === over.id)
+      
+      const newTasks = [...tasks]
+      const [movedTask] = newTasks.splice(oldIndex, 1)
+      newTasks.splice(newIndex, 0, movedTask)
+      
+      form.setValue("tasks", newTasks)
+    }
   }
 
   const onSubmit = (data) => {
@@ -336,233 +468,24 @@ export default function RoutinesPage() {
                     </Button>
                   </div>
 
-                  {form.watch("tasks")?.map((task, index) => (
-                    <Card key={task.id} className="p-4 bg-surface-container-low">
-                      <div className="flex items-center gap-4">
-                        <GripVertical className="w-5 h-5 text-foreground/40" />
-                        <div className="flex-1 space-y-2">
-                          <FormField
-                            control={form.control}
-                            name={`tasks.${index}.name`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input
-                                    placeholder="Task name..."
-                                    className="bg-surface-container border-outline"
-                                    {...field}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name={`tasks.${index}.duration`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="bg-surface-container border-outline">
-                                      <SelectValue placeholder="Duration" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent className="bg-surface-container-high border-outline">
-                                    {[5, 10, 15, 20, 25, 30, 45, 60].map((mins) => (
-                                      <SelectItem 
-                                        key={mins} 
-                                        value={String(mins)}
-                                      >
-                                        {mins} minutes
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`tasks.${index}.energyLevel`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Energy Level</FormLabel>
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger className="bg-surface-container border-outline">
-                                        <SelectValue placeholder="Select energy level" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {ENERGY_LEVELS.map(level => (
-                                        <SelectItem 
-                                          key={level.value} 
-                                          value={level.value}
-                                          className="flex items-center gap-2"
-                                        >
-                                          <level.icon className={`w-4 h-4 ${level.color}`} />
-                                          {level.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name={`tasks.${index}.focusType`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Focus Type</FormLabel>
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger className="bg-surface-container border-outline">
-                                        <SelectValue placeholder="Select focus type" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {FOCUS_TYPES.map(type => (
-                                        <SelectItem 
-                                          key={type.value} 
-                                          value={type.value}
-                                          className="flex items-center gap-2"
-                                        >
-                                          <type.icon className="w-4 h-4" />
-                                          {type.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`tasks.${index}.environment`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Environment</FormLabel>
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger className="bg-surface-container border-outline">
-                                        <SelectValue placeholder="Select environment" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {ENVIRONMENT_NEEDS.map(env => (
-                                        <SelectItem 
-                                          key={env.value} 
-                                          value={env.value}
-                                          className="flex items-center gap-2"
-                                        >
-                                          <env.icon className="w-4 h-4" />
-                                          {env.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name={`tasks.${index}.timePreference`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Best Time</FormLabel>
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger className="bg-surface-container border-outline">
-                                        <SelectValue placeholder="Select time" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {TIME_PREFERENCES.map(time => (
-                                        <SelectItem 
-                                          key={time.value} 
-                                          value={time.value}
-                                          className="flex items-center gap-2"
-                                        >
-                                          <time.icon className="w-4 h-4" />
-                                          {time.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <FormField
-                            control={form.control}
-                            name={`tasks.${index}.notes`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Notes & Instructions</FormLabel>
-                                <FormControl>
-                                  <Textarea
-                                    placeholder="Add any helpful notes or instructions..."
-                                    className="bg-surface-container border-outline resize-none h-20"
-                                    {...field}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`tasks.${index}.motivation`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Motivation / Reward</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="What makes this task worthwhile?"
-                                    className="bg-surface-container border-outline"
-                                    {...field}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeTask(index)}
-                          className="text-error state-layer-hover"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
+                  <DndContext
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={form.watch("tasks")}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {form.watch("tasks")?.map((task, index) => (
+                        <SortableTask 
+                          key={task.id} 
+                          task={task} 
+                          index={index} 
+                          tasks={form.watch("tasks")}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
                 </div>
 
                 <DialogFooter>

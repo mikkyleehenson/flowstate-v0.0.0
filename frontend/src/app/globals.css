@@ -29,6 +29,14 @@
   .material-elevation-3 {
     @apply bg-surface-container-high shadow-elevation-3;
   }
+
+  .select-content {
+    @apply bg-surface-container-high border border-outline;
+  }
+
+  .energy-level-dropdown {
+    @apply bg-surface-container-high border border-outline;
+  }
 }
 
 @layer utilities {
@@ -58,6 +66,10 @@
   
   .state-layer-hover {
     @apply hover:bg-white/[0.08] transition-colors duration-200;
+  }
+
+  .state-layer-active {
+    @apply active:bg-white/[0.12] transition-colors duration-200;
   }
 }
 
